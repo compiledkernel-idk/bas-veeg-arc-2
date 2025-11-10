@@ -15,6 +15,7 @@
 #include "core/Engine.hpp"
 #include "graphics/ProceduralGenerator.hpp"
 #include <iostream>
+#include <cmath>
 
 namespace BVA {
 

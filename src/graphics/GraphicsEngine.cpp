@@ -16,6 +16,7 @@
 #include "graphics/LightingManager.hpp"
 #include "graphics/ProceduralGenerator.hpp"
 #include <iostream>
+#include <cmath>
 
 namespace BVA {
 
