@@ -245,10 +245,6 @@ This is currently a solo project, but contributions may be welcome in the future
 - All the characters are based on the original bas-veeg-arc game
 - Dutch dialogue and character names preserved from original
 
-## Contact
-
-[Contact information]
-
 ---
 
 **Note**: This is a work in progress. The game is being built from the ground up as a complete, distribution-ready title. Development is ongoing and features are being added continuously.
