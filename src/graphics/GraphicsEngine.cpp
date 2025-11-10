@@ -1,7 +1,20 @@
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "graphics/GraphicsEngine.hpp"
 #include "graphics/PostProcessManager.hpp"
 #include "graphics/ParticleManager.hpp"
 #include "graphics/LightingManager.hpp"
+#include "graphics/ProceduralGenerator.hpp"
 #include <iostream>
 
 namespace BVA {
@@ -128,11 +141,17 @@ void GraphicsEngine::update(float dt) {
 void GraphicsEngine::setupResources() {
     Ogre::ResourceGroupManager& rgm = Ogre::ResourceGroupManager::getSingleton();
 
-    // Add resource locations
-    rgm.addResourceLocation("assets/models", "FileSystem", "General");
-    rgm.addResourceLocation("assets/textures", "FileSystem", "General");
-    rgm.addResourceLocation("assets/materials", "FileSystem", "General");
-    rgm.addResourceLocation("shaders", "FileSystem", "General");
+    // Initialize procedural generators
+    ProceduralMeshGenerator::initialize(sceneManager);
+    ProceduralTextureGenerator::initialize();
+    ProceduralAudioGenerator::initialize();
+
+    // Create base materials procedurally
+    ProceduralTextureGenerator::createCharacterMaterial("CharacterMaterial", Ogre::ColourValue(0.8f, 0.8f, 0.9f));
+    ProceduralTextureGenerator::createGlowingMaterial("GlowingMaterial", Ogre::ColourValue(0.5f, 0.8f, 1.0f));
+    ProceduralTextureGenerator::createEnergyMaterial("EnergyMaterial", Ogre::ColourValue(0.3f, 0.7f, 1.0f));
+    ProceduralTextureGenerator::createMetallicMaterial("ArenaMaterial", Ogre::ColourValue(0.2f, 0.2f, 0.3f));
+    ProceduralTextureGenerator::createGlowingMaterial("SkyMaterial", Ogre::ColourValue(0.3f, 0.5f, 0.8f));
 }
 
 void GraphicsEngine::setupCamera() {
@@ -160,22 +179,15 @@ void GraphicsEngine::setupPBRShaders() {
 }
 
 void GraphicsEngine::createScene() {
-    // Create ground plane
-    Ogre::Plane plane(Ogre::Vector3::UNIT_Y, 0);
-    Ogre::MeshManager::getSingleton().createPlane(
-        "ground",
-        Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
-        plane,
-        100.0f, 100.0f,
-        20, 20,
-        true, 1,
-        5.0f, 5.0f,
-        Ogre::Vector3::UNIT_Z
-    );
+    // Create procedural arena
+    Ogre::ManualObject* arena = ProceduralMeshGenerator::createArena("MainArena", 50.0f);
+    Ogre::SceneNode* arenaNode = sceneManager->getRootSceneNode()->createChildSceneNode();
+    arenaNode->attachObject(arena);
 
-    Ogre::Entity* groundEntity = sceneManager->createEntity("ground");
-    Ogre::SceneNode* groundNode = sceneManager->getRootSceneNode()->createChildSceneNode();
-    groundNode->attachObject(groundEntity);
+    // Create procedural sky dome
+    Ogre::ManualObject* sky = ProceduralMeshGenerator::createSkyDome("SkyDome");
+    Ogre::SceneNode* skyNode = sceneManager->getRootSceneNode()->createChildSceneNode();
+    skyNode->attachObject(sky);
 
     // Create main directional light (sun)
     Ogre::Light* sunLight = sceneManager->createLight("SunLight");
@@ -183,6 +195,28 @@ void GraphicsEngine::createScene() {
     sunLight->setDirection(Ogre::Vector3(-0.5f, -1.0f, -0.3f).normalisedCopy());
     sunLight->setDiffuseColour(Ogre::ColourValue(1.0f, 0.95f, 0.9f));
     sunLight->setSpecularColour(Ogre::ColourValue(1.0f, 1.0f, 1.0f));
+
+    // Add point lights for dramatic effect
+    for (int i = 0; i < 4; i++) {
+        float angle = i * M_PI / 2.0f;
+        float radius = 20.0f;
+
+        Ogre::Light* light = sceneManager->createLight("PointLight" + std::to_string(i));
+        light->setType(Ogre::Light::LT_POINT);
+        light->setPosition(Ogre::Vector3(cos(angle) * radius, 5.0f, sin(angle) * radius));
+
+        // Colored lights for atmosphere
+        Ogre::ColourValue colors[] = {
+            Ogre::ColourValue(1.0f, 0.3f, 0.3f),  // Red
+            Ogre::ColourValue(0.3f, 1.0f, 0.3f),  // Green
+            Ogre::ColourValue(0.3f, 0.3f, 1.0f),  // Blue
+            Ogre::ColourValue(1.0f, 1.0f, 0.3f)   // Yellow
+        };
+
+        light->setDiffuseColour(colors[i]);
+        light->setSpecularColour(Ogre::ColourValue::White);
+        light->setAttenuation(50.0f, 1.0f, 0.045f, 0.0075f);
+    }
 }
 
 Ogre::SceneNode* GraphicsEngine::createSceneNode(const std::string& name) {
