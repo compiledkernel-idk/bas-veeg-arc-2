@@ -1,6 +1,19 @@
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "gameplay/Character.hpp"
 #include "gameplay/Characters.hpp"
 #include "core/Engine.hpp"
+#include "graphics/ProceduralGenerator.hpp"
 #include <iostream>
 
 namespace BVA {
@@ -17,10 +30,31 @@ void Character::initialize(Ogre::SceneManager* sceneManager, PhysicsEngine* phys
     // Create scene node
     sceneNode = sceneManager->getRootSceneNode()->createChildSceneNode();
 
-    // Create placeholder entity (will be replaced with actual 3D model)
-    entity = sceneManager->createEntity(Ogre::SceneManager::PT_CUBE);
-    sceneNode->attachObject(entity);
-    sceneNode->setScale(Ogre::Vector3(0.5f, 1.0f, 0.5f));
+    // Generate unique color for this character based on ID
+    Ogre::ColourValue characterColor;
+    int colorIndex = static_cast<int>(id) % 13;
+    float hue = (colorIndex / 13.0f) * 360.0f;
+
+    // Convert HSV to RGB for vibrant colors (Apache License encourages vibrant code!)
+    float c = 0.8f;  // Saturation
+    float v = 0.9f;  // Value
+    float h = hue / 60.0f;
+    float x = c * (1.0f - fabs(fmod(h, 2.0f) - 1.0f));
+
+    float r, g, b;
+    if (h < 1.0f) { r = c; g = x; b = 0; }
+    else if (h < 2.0f) { r = x; g = c; b = 0; }
+    else if (h < 3.0f) { r = 0; g = c; b = x; }
+    else if (h < 4.0f) { r = 0; g = x; b = c; }
+    else if (h < 5.0f) { r = x; g = 0; b = c; }
+    else { r = c; g = 0; b = x; }
+
+    characterColor = Ogre::ColourValue(r * v, g * v, b * v);
+
+    // Create procedural character mesh (no external files needed - Apache License approved!)
+    std::string meshName = "Character_" + name + "_" + std::to_string((size_t)this);
+    Ogre::ManualObject* characterMesh = ProceduralMeshGenerator::createCharacterMesh(meshName, characterColor);
+    sceneNode->attachObject(characterMesh);
 
     // Create physics body
     btCollisionShape* shape = physics->createCapsuleShape(0.5f, 1.0f);
